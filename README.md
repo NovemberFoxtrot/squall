@@ -1,10 +1,12 @@
 squall
 ======
 
-
-// https://api.digitalocean.com/droplets/new?name=[droplet_name]&size_id=[size_id]&image_id=[image_id]&region_id=[region_id]&ssh_key_ids=[ssh_key_id1],[ssh_key_id2]
+~~~
+squall client_id=CLIENT_ID api_key=API_KEY droplets
+~~~
 
 // https://api.digitalocean.com/droplets
+// https://api.digitalocean.com/droplets/new?name=[droplet_name]&size_id=[size_id]&image_id=[image_id]&region_id=[region_id]&ssh_key_ids=[ssh_key_id1],[ssh_key_id2]
 // https://api.digitalocean.com/droplets/[droplet_id]
 // https://api.digitalocean.com/droplets/[droplet_id]/reboot/
 // https://api.digitalocean.com/droplets/[droplet_id]/power_cycle/

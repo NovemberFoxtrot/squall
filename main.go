@@ -192,5 +192,10 @@ func main() {
 
 	json.Unmarshal([]byte(theString), &s)
 
+	if s.Status != "OK" {
+		fmt.Println(`error:`, s.Message)
+		os.Exit(1)
+	}
+
 	fmt.Println(s)
 }
