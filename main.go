@@ -1,390 +1,234 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"time"
 )
 
-https://api.digitalocean.com/droplets/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	Droplets []struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
-		ImageId int `json:"image_id"`
-		SizeId int `json:"size_id"`
-		RegionId int `json:"region_id"`
-		BackupsActive bool `json:"backups_active"`
-		IpAddress string `json:"ip_address"`
-		PrivateIpAddress interface{} `json:"private_ip_address"`
-		Locked bool `json:"locked"`
-		Status string `json:"status"`
-		CreatedAt string `json:"created_at"`
-	} `json:"droplets"`
+type Config struct {
+	ConnectTimeout   time.Duration
+	ReadWriteTimeout time.Duration
 }
 
-https://api.digitalocean.com/droplets/new?client_id=[your_client_id]&api_key=[your_api_key]&name=[droplet_name]&size_id=[size_id]&image_id=[image_id]&region_id=[region_id]&ssh_key_ids=[ssh_key_id1],[ssh_key_id2]
+func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
+	return func(netw, addr string) (net.Conn, error) {
+		conn, err := net.DialTimeout(netw, addr, cTimeout)
 
-type Droplets struct {
-	Status string `json:"status"`
-	Droplet struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
-		ImageId int `json:"image_id"`
-		SizeId int `json:"size_id"`
-		EventId int `json:"event_id"`
-	} `json:"droplet"`
+		if err != nil {
+			return nil, err
+		}
+
+		conn.SetDeadline(time.Now().Add(rwTimeout))
+
+		return conn, nil
+	}
 }
 
-https://api.digitalocean.com/droplets/[droplet_id]?client_id=[your_client_id]&api_key=[your_api_key]
+func FetchURL(theurl string) string {
+	var client *http.Client
 
-type Droplets struct {
-	Status string `json:"status"`
-	Droplet struct {
-		Id int `json:"id"`
-		ImageId int `json:"image_id"`
-		Name string `json:"name"`
-		RegionId int `json:"region_id"`
-		SizeId int `json:"size_id"`
-		BackupsActive bool `json:"backups_active"`
-		Backups []undefined `json:"backups"`
-		Snapshots []undefined `json:"snapshots"`
-		IpAddress string `json:"ip_address"`
-		PrivateIpAddress interface{} `json:"private_ip_address"`
-		Locked bool `json:"locked"`
-		Status string `json:"status"`
-	} `json:"droplet"`
+	if proxy := os.Getenv("http_proxy"); proxy != `` {
+		proxyUrl, err := url.Parse(proxy)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		transport := http.Transport{
+			Dial:  TimeoutDialer(5*time.Second, 5*time.Second),
+			Proxy: http.ProxyURL(proxyUrl),
+		}
+
+		client = &http.Client{Transport: &transport}
+	} else {
+		client = &http.Client{}
+	}
+
+	req, err := http.NewRequest(`GET`, theurl, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return string(body)
 }
 
-https://api.digitalocean.com/droplets/[droplet_id]/reboot/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
+type Droplet struct {
+	Backups          []interface{} `json:"backups"`
+	BackupsActive    bool          `json:"backups_active"`
+	CreatedAt        string        `json:"created_at"`
+	EventId          int           `json:"event_id"`
+	Id               int           `json:"id"`
+	ImageId          int           `json:"image_id"`
+	IpAddress        string        `json:"ip_address"`
+	Locked           bool          `json:"locked"`
+	Name             string        `json:"name"`
+	PrivateIpAddress interface{}   `json:"private_ip_address"`
+	RegionId         int           `json:"region_id"`
+	SizeId           int           `json:"size_id"`
+	Snapshots        []interface{} `json:"snapshots"`
+	Status           string        `json:"status"`
 }
 
-https://api.digitalocean.com/droplets/[droplet_id]/power_cycle/?client_id=[your_client_id]&api_key=[your_api_key]
-
 type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/shutdown/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/power_off/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/power_on/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/password_reset/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/resize/?size_id=[size_id]&client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/snapshot/?name=[snapshot_name]&client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/restore/?image_id=[image_id]&client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/rebuild/?image_id=[image_id]&client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/rename/?client_id=[your_client_id]&api_key=[your_api_key]&name=[name]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/droplets/[droplet_id]/destroy/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/regions/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	Regions []struct {
-		Id int `json:"id"`
+	Status     string    `json:"status"`
+	Droplets   []Droplet `json:"droplets"`
+	TheDroplet Droplet   `json:"droplet"`
+	Message    string    `json:"message"`
+	EventId    int       `json:"event_id"`
+	Regions    []struct {
+		Id   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"regions"`
-}
-
-https://api.digitalocean.com/images/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
 	Images []struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
+		Id           int    `json:"id"`
+		Name         string `json:"name"`
 		Distribution string `json:"distribution"`
 	} `json:"images"`
-}
-
-https://api.digitalocean.com/images/[image_id]/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
 	Image struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
+		Id           int    `json:"id"`
+		Name         string `json:"name"`
 		Distribution string `json:"distribution"`
 	} `json:"image"`
-}
-
-https://api.digitalocean.com/images/[image_id]/destroy/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-}
-
-https://api.digitalocean.com/images/[image_id]/transfer/?client_id=[your_client_id]&api_key=[your_api_key]&region_id=[region_id]
-
-type Droplets struct {
-	Status string `json:"status"`
-	EventId int `json:"event_id"`
-}
-
-https://api.digitalocean.com/ssh_keys/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
 	SshKeys []struct {
-		Id int `json:"id"`
+		Id   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"ssh_keys"`
-}
-
-https://api.digitalocean.com/ssh_keys/new/?name=[ssh_key_name]&ssh_pub_key=[ssh_public_key]&client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
 	SshKey struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
+		Id        int    `json:"id"`
+		Name      string `json:"name"`
 		SshPubKey string `json:"ssh_pub_key"`
 	} `json:"ssh_key"`
-}
-
-https://api.digitalocean.com/ssh_keys/[ssh_key_id]/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	SshKey struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
-		SshPubKey string `json:"ssh_pub_key"`
-	} `json:"ssh_key"`
-}
-
-https://api.digitalocean.com/ssh_keys/[ssh_key_id]/edit/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	SshKey struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
-		SshPubKey string `json:"ssh_pub_key"`
-	} `json:"ssh_key"`
-}
-
-https://api.digitalocean.com/ssh_keys/[ssh_key_id]/destroy/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-}
-
-https://api.digitalocean.com/sizes/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
 	Sizes []struct {
-		Id int `json:"id"`
+		Id   int    `json:"id"`
 		Name string `json:"name"`
 	} `json:"sizes"`
-}
-
-https://api.digitalocean.com/domains?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
 	Domains []struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
-		Ttl int `json:"ttl"`
-		LiveZoneFile string `json:"live_zone_file"`
-		Error interface{} `json:"error"`
+		Id                int         `json:"id"`
+		Name              string      `json:"name"`
+		Ttl               int         `json:"ttl"`
+		LiveZoneFile      string      `json:"live_zone_file"`
+		Error             interface{} `json:"error"`
 		ZoneFileWithError interface{} `json:"zone_file_with_error"`
 	} `json:"domains"`
-}
-
-https://api.digitalocean.com/domains/new?client_id=[your_client_id]&api_key=[your_api_key]&name=[domain]&ip_address=[ip_address]
-
-type Droplets struct {
-	Status string `json:"status"`
 	Domain struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
-	} `json:"domain"`
-}
-
-https://api.digitalocean.com/domains/[domain_id]?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	Domain struct {
-		Id int `json:"id"`
-		Name string `json:"name"`
-		Ttl int `json:"ttl"`
-		LiveZoneFile string `json:"live_zone_file"`
-		Error interface{} `json:"error"`
+		Id                int         `json:"id"`
+		Name              string      `json:"name"`
+		Ttl               int         `json:"ttl"`
+		LiveZoneFile      string      `json:"live_zone_file"`
+		Error             interface{} `json:"error"`
 		ZoneFileWithError interface{} `json:"zone_file_with_error"`
 	} `json:"domain"`
-}
-
-https://api.digitalocean.com/domains/[domain_id]/destroy?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-}
-
-https://api.digitalocean.com/domains/[domain_id]/records?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
+	Record struct {
+		Data       string      `json:"data"`
+		DomainId   string      `json:"domain_id"`
+		Id         int         `json:"id"`
+		Name       string      `json:"name"`
+		Port       interface{} `json:"port"`
+		Priority   interface{} `json:"priority"`
+		RecordType string      `json:"record_type"`
+		Weight     interface{} `json:"weight"`
+	} `json:"record"`
 	Records []struct {
-		Id int `json:"id"`
-		DomainId string `json:"domain_id"`
-		RecordType string `json:"record_type"`
-		Name string `json:"name"`
-		Data string `json:"data"`
-		Priority interface{} `json:"priority"`
-		Port interface{} `json:"port"`
-		Weight interface{} `json:"weight"`
+		Id         int         `json:"id"`
+		DomainId   string      `json:"domain_id"`
+		RecordType string      `json:"record_type"`
+		Name       string      `json:"name"`
+		Data       string      `json:"data"`
+		Priority   interface{} `json:"priority"`
+		Port       interface{} `json:"port"`
+		Weight     interface{} `json:"weight"`
 	} `json:"records"`
-}
-
-https://api.digitalocean.com/domains/[domain_id]/records/new?client_id=[your_client_id]&api_key=[your_api_key]&record_type=[record_type]&data=[data]
-
-type Droplets struct {
-	Status string `json:"status"`
 	DomainRecord struct {
-		Id int `json:"id"`
-		DomainId string `json:"domain_id"`
-		RecordType string `json:"record_type"`
-		Name string `json:"name"`
-		Data string `json:"data"`
-		Priority interface{} `json:"priority"`
-		Port interface{} `json:"port"`
-		Weight interface{} `json:"weight"`
+		Id         int         `json:"id"`
+		DomainId   string      `json:"domain_id"`
+		RecordType string      `json:"record_type"`
+		Name       string      `json:"name"`
+		Data       string      `json:"data"`
+		Priority   interface{} `json:"priority"`
+		Port       interface{} `json:"port"`
+		Weight     interface{} `json:"weight"`
 	} `json:"domain_record"`
-}
-
-https://api.digitalocean.com/domains/[domain_id]/records/[record_id]?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	Record struct {
-		Id int `json:"id"`
-		DomainId string `json:"domain_id"`
-		RecordType string `json:"record_type"`
-		Name string `json:"name"`
-		Data string `json:"data"`
-		Priority interface{} `json:"priority"`
-		Port interface{} `json:"port"`
-		Weight interface{} `json:"weight"`
-	} `json:"record"`
-}
-
-https://api.digitalocean.com/domains/[domain_id]/records/[record_id]/edit?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-	Record struct {
-		Id int `json:"id"`
-		DomainId string `json:"domain_id"`
-		RecordType string `json:"record_type"`
-		Name string `json:"name"`
-		Data string `json:"data"`
-		Priority interface{} `json:"priority"`
-		Port interface{} `json:"port"`
-		Weight interface{} `json:"weight"`
-	} `json:"record"`
-}
-
-https://api.digitalocean.com/domains/[domain_id]/records/[record_id]/destroy?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
-}
-
-https://api.digitalocean.com/events/[event_id]/?client_id=[your_client_id]&api_key=[your_api_key]
-
-type Droplets struct {
-	Status string `json:"status"`
 	Event struct {
-		Id int `json:"id"`
+		Id           int    `json:"id"`
 		ActionStatus string `json:"action_status"`
-		DropletId int `json:"droplet_id"`
-		EventTypeId int `json:"event_type_id"`
-		Percentage string `json:"percentage"`
+		DropletId    int    `json:"droplet_id"`
+		EventTypeId  int    `json:"event_type_id"`
+		Percentage   string `json:"percentage"`
 	} `json:"event"`
 }
 
-status: 401
+// https://api.digitalocean.com/droplets/new?name=[droplet_name]&size_id=[size_id]&image_id=[image_id]&region_id=[region_id]&ssh_key_ids=[ssh_key_id1],[ssh_key_id2]
 
-type Droplets struct {
-	Status string `json:"status"`
-	Message string `json:"message"`
-}
+// https://api.digitalocean.com/droplets/[droplet_id]
+// https://api.digitalocean.com/droplets/[droplet_id]/reboot/
+// https://api.digitalocean.com/droplets/[droplet_id]/power_cycle/
+// https://api.digitalocean.com/droplets/[droplet_id]/shutdown/
+// https://api.digitalocean.com/droplets/[droplet_id]/power_off/
+// https://api.digitalocean.com/droplets/[droplet_id]/power_on/
+// https://api.digitalocean.com/droplets/[droplet_id]/password_reset/
+// https://api.digitalocean.com/droplets/[droplet_id]/resize/?size_id=[size_id]
+// https://api.digitalocean.com/droplets/[droplet_id]/snapshot/?name=[snapshot_name]
+// https://api.digitalocean.com/droplets/[droplet_id]/restore/?image_id=[image_id]
+// https://api.digitalocean.com/droplets/[droplet_id]/rebuild/?image_id=[image_id]
+// https://api.digitalocean.com/droplets/[droplet_id]/rename/?name=[name]
+// https://api.digitalocean.com/droplets/[droplet_id]/destroy/
 
-status: 404
+// https://api.digitalocean.com/images/[image_id]/
+// https://api.digitalocean.com/images/[image_id]/destroy/
+// https://api.digitalocean.com/images/[image_id]/transfer/?region_id=[region_id]
 
-type Droplets struct {
-	Status string `json:"status"`
-	Message string `json:"message"`
-}
+// https://api.digitalocean.com/ssh_keys/new/?name=[ssh_key_name]&ssh_pub_key=[ssh_public_key]
 
+// https://api.digitalocean.com/ssh_keys/[ssh_key_id]/
+// https://api.digitalocean.com/ssh_keys/[ssh_key_id]/edit/
+// https://api.digitalocean.com/ssh_keys/[ssh_key_id]/destroy/
+
+// https://api.digitalocean.com/domains/new?name=[domain]&ip_address=[ip_address]
+
+// https://api.digitalocean.com/domains/[domain_id]
+// https://api.digitalocean.com/domains/[domain_id]/destroy
+// https://api.digitalocean.com/domains/[domain_id]/records
+// https://api.digitalocean.com/domains/[domain_id]/records/new?record_type=[record_type]&data=[data]
+// https://api.digitalocean.com/domains/[domain_id]/records/[record_id]
+// https://api.digitalocean.com/domains/[domain_id]/records/[record_id]/edit
+// https://api.digitalocean.com/domains/[domain_id]/records/[record_id]/destroy
+
+// https://api.digitalocean.com/events/[event_id]/
 
 func main() {
+	clientID := os.Args[1]
+	apiKey := os.Args[2]
+
+	url := `https://api.digitalocean.com/`
+
+	switch os.Args[3] {
+	case `domains`, `droplets`, `events`, `images`, `regions`, `sizes`, `ssh_keys`:
+		url = url + os.Args[3]
+	}
+
+	theString := FetchURL(url + `?client_id=` + clientID + `&api_key=` + apiKey)
+
+	var droplets Droplets
+
+	json.Unmarshal([]byte(theString), &droplets)
+
+	fmt.Println(droplets)
 }
