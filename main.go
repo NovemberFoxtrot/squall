@@ -71,6 +71,26 @@ func fetchURL(theurl string) string {
 	return string(body)
 }
 
+type domain struct {
+	Error             interface{} `json:"error"`
+	ID                int         `json:"id"`
+	LiveZoneFile      string      `json:"live_zone_file"`
+	Name              string      `json:"name"`
+	Ttl               int         `json:"ttl"`
+	ZoneFileWithError interface{} `json:"zone_file_with_error"`
+}
+
+type domainrecord struct {
+	ID         int         `json:"id"`
+	DomainID   string      `json:"domain_id"`
+	RecordType string      `json:"record_type"`
+	Name       string      `json:"name"`
+	Data       string      `json:"data"`
+	Priority   interface{} `json:"priority"`
+	Port       interface{} `json:"port"`
+	Weight     interface{} `json:"weight"`
+}
+
 type droplet struct {
 	Backups          []interface{} `json:"backups"`
 	BackupsActive    bool          `json:"backups_active"`
@@ -88,25 +108,6 @@ type droplet struct {
 	Status           string        `json:"status"`
 }
 
-type record struct {
-	Data       string      `json:"data"`
-	DomainID   string      `json:"domain_id"`
-	ID         int         `json:"id"`
-	Name       string      `json:"name"`
-	Port       interface{} `json:"port"`
-	Priority   interface{} `json:"priority"`
-	RecordType string      `json:"record_type"`
-	Weight     interface{} `json:"weight"`
-}
-
-type domain struct {
-	Error             interface{} `json:"error"`
-	ID                int         `json:"id"`
-	LiveZoneFile      string      `json:"live_zone_file"`
-	Name              string      `json:"name"`
-	Ttl               int         `json:"ttl"`
-	ZoneFileWithError interface{} `json:"zone_file_with_error"`
-}
 
 type event struct {
 	ActionStatus string `json:"action_status"`
@@ -122,20 +123,14 @@ type image struct {
 	Distribution string `json:"distribution"`
 }
 
-type sshkey struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	SshPubKey string `json:"ssh_pub_key"`
-}
-
-type domainrecord struct {
-	ID         int         `json:"id"`
-	DomainID   string      `json:"domain_id"`
-	RecordType string      `json:"record_type"`
-	Name       string      `json:"name"`
+type record struct {
 	Data       string      `json:"data"`
-	Priority   interface{} `json:"priority"`
+	DomainID   string      `json:"domain_id"`
+	ID         int         `json:"id"`
+	Name       string      `json:"name"`
 	Port       interface{} `json:"port"`
+	Priority   interface{} `json:"priority"`
+	RecordType string      `json:"record_type"`
 	Weight     interface{} `json:"weight"`
 }
 
@@ -147,6 +142,12 @@ type regions []struct {
 type sizes []struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
+}
+
+type sshkey struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	SshPubKey string `json:"ssh_pub_key"`
 }
 
 type squall struct {
