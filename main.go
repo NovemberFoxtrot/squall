@@ -108,7 +108,6 @@ type droplet struct {
 	Status           string        `json:"status"`
 }
 
-
 type event struct {
 	ActionStatus string `json:"action_status"`
 	DropletID    int    `json:"droplet_id"`
